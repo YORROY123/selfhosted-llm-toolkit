@@ -1,0 +1,27 @@
+{
+  "_comment": [
+    "Merge the modelPicker key into your existing ~/.claude/settings.json - do not",
+    "replace the whole file.",
+    "With replaceBuiltInOptions false these rows are ADDED to the built-in lineup,",
+    "so the real Claude models stay in the picker.",
+    "behavesAs must be a model id this Claude Code version knows; it decides the",
+    "client-side prompt profile and capability defaults applied to your model."
+  ],
+  "modelPicker": {
+    "replaceBuiltInOptions": false,
+    "options": [
+      {
+        "model": "my-strong",
+        "label": "my-strong (self-hosted)",
+        "description": "自己機器上的模型 / 寫程式用",
+        "behavesAs": "claude-haiku-4-5-20251001"
+      },
+      {
+        "model": "my-fast",
+        "label": "my-fast (self-hosted)",
+        "description": "自己機器上的模型 / 快",
+        "behavesAs": "claude-haiku-4-5-20251001"
+      }
+    ]
+  }
+}

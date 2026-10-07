@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 聊天</title>
+<style>
+  :root{
+    --bg:#f7f7f8; --panel:#ffffff; --ink:#1a1a1c; --dim:#6b6b73;
+    --line:#e3e3e8; --mine:#1f6feb; --mine-ink:#ffffff;
+    --code-bg:#f2f2f5; --accent:#1f6feb; --warn:#b3261e; --ok:#1a7f45;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#17171a; --panel:#202024; --ink:#ececef; --dim:#9a9aa4;
+      --line:#31313a; --mine:#2f6fd0; --mine-ink:#ffffff;
+      --code-bg:#17171a; --accent:#6aa2f0; --warn:#f2847c; --ok:#5fd18f;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.65 system-ui,"Segoe UI","Microsoft JhengHei","PingFang TC",sans-serif;
+    display:flex; flex-direction:column;
+  }
+
+  /* ── 頂欄 ── */
+  header{
+    flex:0 0 auto; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:10px 16px; background:var(--panel); border-bottom:1px solid var(--line);
+  }
+  header .brand{font-weight:650; letter-spacing:.3px; margin-right:4px}
+  header .sp{flex:1}
+  select,button,input{
+    font:inherit; color:var(--ink); background:var(--panel);
+    border:1px solid var(--line); border-radius:8px; padding:6px 10px;
+  }
+  select#pick{max-width:min(46vw,340px)}
+  button{cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--accent)}
+  button:disabled{opacity:.45; cursor:default}
+  label.chk{display:flex; align-items:center; gap:6px; color:var(--dim); font-size:13px; cursor:pointer}
+  label.chk input{width:auto; padding:0; accent-color:var(--accent)}
+  .pill{font-size:12px; color:var(--dim); border:1px solid var(--line); border-radius:999px; padding:3px 9px}
+
+  /* ── 對話區 ── */
+  main{flex:1 1 auto; overflow-y:auto; padding:20px 16px 8px}
+  .wrap{max-width:780px; margin:0 auto; display:flex; flex-direction:column; gap:16px}
+  .row{display:flex; flex-direction:column; gap:5px}
+  .row.me{align-items:flex-end}
+  .who{font-size:12px; color:var(--dim); padding:0 4px}
+  .bubble{
+    max-width:100%; padding:11px 14px; border-radius:14px;
+    background:var(--panel); border:1px solid var(--line);
+    overflow-wrap:anywhere;
+  }
+  .row.me .bubble{background:var(--mine); color:var(--mine-ink); border-color:transparent}
+  .bubble>*:first-child{margin-top:0}
+  .bubble>*:last-child{margin-bottom:0}
+  .bubble p{margin:.55em 0}
+  .bubble ul,.bubble ol{margin:.55em 0; padding-left:1.4em}
+  .bubble li{margin:.2em 0}
+  .bubble h1,.bubble h2,.bubble h3{margin:.8em 0 .4em; line-height:1.3}
+  .bubble h1{font-size:1.3em} .bubble h2{font-size:1.15em} .bubble h3{font-size:1.03em}
+  .bubble code{background:var(--code-bg); border-radius:4px; padding:1px 5px; font-family:ui-monospace,Consolas,monospace; font-size:.9em}
+  .row.me .bubble code{background:rgba(255,255,255,.22)}
+  .bubble pre{background:var(--code-bg); border:1px solid var(--line); border-radius:10px; padding:11px 13px; overflow-x:auto; margin:.6em 0}
+  .bubble pre code{background:none; padding:0; font-size:.88em; line-height:1.55}
+  .bubble blockquote{margin:.6em 0; padding-left:.9em; border-left:3px solid var(--line); color:var(--dim)}
+
+  details.think{margin:0 0 .5em; font-size:13px; color:var(--dim)}
+  details.think summary{cursor:pointer; user-select:none; color:var(--accent)}
+  details.think .body{
+    white-space:pre-wrap; margin-top:7px; padding:9px 11px;
+    background:var(--code-bg); border-radius:8px; max-height:320px; overflow-y:auto;
+  }
+
+  .meta{font-size:12px; color:var(--dim); padding:0 4px; display:flex; gap:10px; flex-wrap:wrap}
+  .meta button{border:none; background:none; padding:0; color:var(--dim); font-size:12px; text-decoration:underline}
+  .meta button:hover{color:var(--accent)}
+  .err{border-color:var(--warn); color:var(--warn)}
+  .dots::after{content:"．"; animation:d 1.2s steps(4,end) infinite}
+  @keyframes d{0%{content:"．"}25%{content:"．．"}50%{content:"．．．"}75%{content:"．．．．"}}
+
+  /* ── 輸入列 ── */
+  footer{
+    flex:0 0 auto; background:var(--panel); border-top:1px solid var(--line);
+    padding:11px 16px 14px;
+  }
+  .ibar{max-width:780px; margin:0 auto; display:flex; gap:9px; align-items:flex-end}
+  textarea{
+    flex:1; resize:none; font:inherit; color:var(--ink); background:var(--bg);
+    border:1px solid var(--line); border-radius:11px; padding:10px 12px;
+    min-height:44px; max-height:210px; overflow-y:auto; line-height:1.55;
+  }
+  textarea:focus{outline:none; border-color:var(--accent)}
+  .send{min-width:74px; height:44px; background:var(--mine); color:var(--mine-ink); border-color:transparent; font-weight:600}
+  .hint{max-width:780px; margin:7px auto 0; font-size:12px; color:var(--dim); text-align:center}
+
+  /* ── 設定視窗 ── */
+  .mask{position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; padding:18px; z-index:9}
+  .mask.on{display:flex}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:15px;
+    padding:22px; width:100%; max-width:580px; max-height:86vh; overflow-y:auto;
+  }
+  .card h2{margin:0 0 6px; font-size:17px}
+  .card>p{margin:0 0 16px; color:var(--dim); font-size:13px}
+  .card .acts{display:flex; gap:9px; justify-content:flex-end; margin-top:20px; flex-wrap:wrap}
+  .card .acts .sp{flex:1}
+
+  .prov{border:1px solid var(--line); border-radius:11px; padding:13px; margin-bottom:11px}
+  .prov .top{display:flex; gap:9px; align-items:center; margin-bottom:9px}
+  .prov .top input{flex:1; font-weight:600}
+  .prov .del{color:var(--warn); border-color:transparent; background:none; padding:4px 7px}
+  .prov .del:hover{border-color:var(--warn)}
+  .prov label{display:block; font-size:12px; color:var(--dim); margin:9px 0 4px}
+  .prov input[type=text],.prov input[type=password]{width:100%}
+  .prov .state{font-size:12px; margin-top:9px}
+  .prov .state.ok{color:var(--ok)}
+  .prov .state.bad{color:var(--warn)}
+  .prov .vl{display:flex; align-items:center; gap:7px; font-size:12px; color:var(--dim); margin-top:11px; cursor:pointer}
+  .prov .vl input{width:auto; accent-color:var(--accent)}
+  .note{font-size:12px; color:var(--dim); margin-top:14px; line-height:1.6}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="brand">聊天</span>
+  <select id="pick" title="選供應商和模型"></select>
+  <button id="btnReload" title="重新抓各家的模型清單">↻</button>
+  <label class="chk" title="關掉通常快很多；需要推理的題目再打開">
+    <input type="checkbox" id="think"> 讓它思考
+  </label>
+  <span class="sp"></span>
+  <span class="pill" id="stat">尚未連線</span>
+  <button id="btnNew" title="清空對話">新對話</button>
+  <button id="btnCfg" title="管理供應商">設定</button>
+</header>
+
+<main id="main"><div class="wrap" id="chat"></div></main>
+
+<footer>
+  <div class="ibar">
+    <textarea id="box" rows="1" placeholder="打字問問題…（Enter 送出，Shift+Enter 換行）"></textarea>
+    <button class="send" id="btnSend">送出</button>
+  </div>
+  <div class="hint" id="hint"></div>
+</footer>
+
+<div class="mask" id="mask">
+  <div class="card">
+    <h2>供應商</h2>
+    <p>任何「OpenAI 相容」的服務都能加進來：llm、Ollama、LM Studio、OpenRouter、
+       DeepSeek、Groq… 填好之後模型會自動列出來，聊天時從上面的清單挑。
+       key 只存在這台電腦的瀏覽器裡。</p>
+    <div id="provs"></div>
+    <button id="btnAdd">＋ 新增供應商</button>
+    <div class="acts">
+      <button id="cfgCancel">取消</button>
+      <span class="sp"></span>
+      <button id="cfgSave" class="send" style="min-width:auto;height:auto;padding:7px 15px">儲存並連線</button>
+    </div>
+    <div class="note">
+      <b>網址和 key 要配對</b>：同一個服務可能有對外和對內兩個網址，而一把 key
+      通常只對其中一條有效。用錯網址會回 401，看起來很像 key 壞了，其實只是網址不對。<br>
+      <b>關思考那個勾</b>只對 vLLM／Qwen 這類後端有意義（llm 是）。接 OpenAI 官方之類的
+      服務要取消勾選，不然它會因為多了不認識的參數而拒絕請求。
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ───────── 儲存 ───────── */
+var LS = { provs:"llm.provs", sel:"llm.sel", think:"llm.think", log:"llm.log",
+           oldUrl:"llm.url", oldKey:"llm.key" };
+
+function get(k, d){ try { var v = localStorage.getItem(k); return v === null ? d : v; } catch(e){ return d; } }
+function set(k, v){ try { localStorage.setItem(k, v); } catch(e){} }
+function del(k){ try { localStorage.removeItem(k); } catch(e){} }
+
+function seedProvs(){
+  return [
+    { id:"ep-pub", name:"我的端點（公網）", url:"https://YOUR-ENDPOINT.example.com/v1", key:"", vllm:true },
+    { id:"ep-lan", name:"我的端點（內網）", url:"http://192.0.2.10:4000/v1",          key:"", vllm:true }
+  ];
+}
+
+function loadProvs(){
+  var raw = get(LS.provs, "");
+  var list = null;
+  if (raw){ try { list = JSON.parse(raw); } catch(e){ list = null; } }
+  if (!Array.isArray(list) || !list.length){
+    list = seedProvs();
+    // 從舊版本搬家：之前只存單一組 url + key
+    var ou = get(LS.oldUrl, ""), ok = get(LS.oldKey, "");
+    if (ok){
+      var hit = list.filter(function(p){ return p.url === ou; })[0] || list[0];
+      hit.key = ok;
+      del(LS.oldUrl); del(LS.oldKey);
+    }
+  }
+  return list;
+}
+
+var provs = loadProvs();
+var catalog = [];                 // [{pid, pname, model}]
+var sel = get(LS.sel, "");        // "pid model"
+var msgs = [];
+var busy = false, ctrl = null;
+
+var $ = function(id){ return document.getElementById(id); };
+var chat = $("chat"), main = $("main");
+
+function saveProvs(){ set(LS.provs, JSON.stringify(provs)); }
+function provById(id){ return provs.filter(function(p){ return p.id === id; })[0] || null; }
+function base(u){ return String(u || "").replace(/\/+$/, ""); }
+function current(){
+  var i = sel.indexOf(" ");
+  if (i < 0) return null;
+  var p = provById(sel.slice(0, i));
+  return p ? { prov:p, model:sel.slice(i + 1) } : null;
+}
+
+/* ───────── Markdown（先轉義，模型輸出不可能變成標籤） ───────── */
+function esc(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
+function inline(s){
+  return s
+    .replace(/`([^`\n]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>")
+    .replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g,
+             '<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
+function md(src){
+  var codes = [];
+  var t = esc(src).replace(/```[^\n]*\n?([\s\S]*?)```/g, function(m, body){
+    codes.push(body.replace(/\n$/, ""));
+    return "" + (codes.length - 1) + "";
+  });
+
+  var lines = t.split("\n"), out = [], list = null, para = [];
+  function flushPara(){ if (para.length){ out.push("<p>" + inline(para.join("<br>")) + "</p>"); para = []; } }
+  function flushList(){ if (list){ out.push("</" + list + ">"); list = null; } }
+
+  for (var i = 0; i < lines.length; i++){
+    var ln = lines[i];
+    if (/^\d+$/.test(ln.trim())){ flushPara(); flushList(); out.push(ln.trim()); continue; }
+    if (!ln.trim()){ flushPara(); flushList(); continue; }
+
+    var h = ln.match(/^(#{1,3})\s+(.*)$/);
+    if (h){ flushPara(); flushList(); out.push("<h" + h[1].length + ">" + inline(h[2]) + "</h" + h[1].length + ">"); continue; }
+
+    var ul = ln.match(/^\s*[-*+]\s+(.*)$/), ol = ln.match(/^\s*\d+[.)]\s+(.*)$/);
+    if (ul || ol){
+      flushPara();
+      var want = ul ? "ul" : "ol";
+      if (list !== want){ flushList(); out.push("<" + want + ">"); list = want; }
+      out.push("<li>" + inline((ul || ol)[1]) + "</li>");
+      continue;
+    }
+    var q = ln.match(/^&gt;\s?(.*)$/);
+    if (q){ flushPara(); flushList(); out.push("<blockquote>" + inline(q[1]) + "</blockquote>"); continue; }
+
+    flushList();
+    para.push(ln);
+  }
+  flushPara(); flushList();
+  return out.join("\n").replace(/(\d+)/g, function(m, n){
+    return "<pre><code>" + codes[+n] + "</code></pre>";
+  });
+}
+
+/* ───────── 畫面 ───────── */
+function atBottom(){ return main.scrollHeight - main.scrollTop - main.clientHeight < 90; }
+function toBottom(){ main.scrollTop = main.scrollHeight; }
+
+function addRow(who, mine){
+  var row = document.createElement("div");
+  row.className = "row" + (mine ? " me" : "");
+  var tag = document.createElement("div"); tag.className = "who"; tag.textContent = who;
+  var b = document.createElement("div"); b.className = "bubble";
+  var meta = document.createElement("div"); meta.className = "meta";
+  row.appendChild(tag); row.appendChild(b); row.appendChild(meta);
+  chat.appendChild(row); toBottom();
+  return { row:row, bubble:b, meta:meta };
+}
+
+function copyBtn(meta, getText){
+  var b = document.createElement("button");
+  b.textContent = "複製";
+  b.onclick = function(){
+    var t = getText();
+    if (navigator.clipboard) navigator.clipboard.writeText(t);
+    else { var ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
+    b.textContent = "已複製"; setTimeout(function(){ b.textContent = "複製"; }, 1400);
+  };
+  meta.appendChild(b);
+}
+
+function explain(status, body, who){
+  if (status === 401) return "401：" + who + " 的 key 錯了、沒帶，或網址不對（我的端點（內網） key 打公網網址就會這樣）。按「設定」檢查。";
+  if (status === 403) return "403：這把 key 不能用這個模型。";
+  if (status === 404) return "404：" + who + " 這個網址沒有這個端點，檢查網址結尾有沒有 /v1。";
+  if (status === 429) return "429：送太快或同時太多條，等幾秒再送。";
+  if (status >= 500)  return status + "：" + who + " 後端忙或正在重啟，等一兩分鐘。";
+  if (status === 0)   return "連不到 " + who + "。內網網址要先開 Tailscale；其他檢查網路。";
+  return status + "：" + (body || "未知錯誤").slice(0, 300);
+}
+
+/* ───────── 抓各家模型清單 ───────── */
+function fetchModels(p){
+  if (!p.key && !/localhost|127\.0\.0\.1/.test(p.url)){
+    return Promise.resolve({ p:p, models:[], err:"還沒填 key" });
+  }
+  return fetch(base(p.url) + "/models", { headers:{ Authorization:"Bearer " + (p.key || "x") } })
+    .then(function(r){
+      if (!r.ok) return r.text().then(function(t){ throw { s:r.status, t:t }; });
+      return r.json();
+    })
+    .then(function(j){ return { p:p, models:(j.data || []).map(function(m){ return m.id; }), err:null }; })
+    .catch(function(e){ return { p:p, models:[], err:explain(e && e.s ? e.s : 0, e && e.t, p.name) }; });
+}
+
+function connect(){
+  $("stat").textContent = "連線中…"; $("stat").style.color = "";
+  var any = provs.some(function(p){ return p.key || /localhost|127\.0\.0\.1/.test(p.url); });
+  if (!any){ $("stat").textContent = "需要設定"; openCfg(); return Promise.resolve(); }
+
+  return Promise.all(provs.map(fetchModels)).then(function(res){
+    catalog = [];
+    var okCount = 0, problems = [];
+    res.forEach(function(r){
+      if (r.models.length){ okCount++; }
+      else if (r.err && r.p.key){ problems.push(r.p.name + "：" + r.err); }
+      r.models.forEach(function(m){
+        catalog.push({ pid:r.p.id, pname:r.p.name, model:m });
+      });
+    });
+
+    var sl = $("pick");
+    sl.innerHTML = "";
+    res.forEach(function(r){
+      if (!r.models.length) return;
+      var g = document.createElement("optgroup");
+      g.label = r.p.name;
+      r.models.forEach(function(m){
+        var o = document.createElement("option");
+        o.value = r.p.id + " " + m;
+        o.textContent = m;
+        g.appendChild(o);
+      });
+      sl.appendChild(g);
+    });
+
+    if (!catalog.length){
+      $("stat").textContent = "沒有可用的模型";
+      $("stat").style.color = "var(--warn)";
+      if (problems.length){
+        var r0 = addRow("系統", false);
+        r0.bubble.className = "bubble err";
+        r0.bubble.textContent = problems.join("\n");
+      }
+      return;
+    }
+
+    if (!current()) sel = catalog[0].pid + " " + catalog[0].model;
+    sl.value = sel;
+    if (sl.value !== sel){                       // 存的那個不在清單裡了
+      sel = catalog[0].pid + " " + catalog[0].model;
+      sl.value = sel;
+    }
+    set(LS.sel, sel);
+    applyThinkDefault();
+
+    $("stat").textContent = okCount + " 家 · " + catalog.length + " 個模型";
+    $("stat").style.color = "var(--ok)";
+    if (problems.length) $("hint").textContent = "（" + problems.join("；") + "）";
+    $("box").focus();
+  });
+}
+
+/* my-fast 這類快模型預設不思考，其餘跟隨使用者上次的選擇 */
+function applyThinkDefault(){
+  var saved = get(LS.think, null);
+  if (saved !== null){ $("think").checked = (saved === "1"); return; }
+  var c = current();
+  $("think").checked = !(c && /flash|mini|haiku|small/i.test(c.model));
+}
+
+/* ───────── 送一輪 ───────── */
+function send(){
+  if (busy){ if (ctrl) ctrl.abort(); return; }
+  var text = $("box").value.trim();
+  if (!text) return;
+  var cur = current();
+  if (!cur){ openCfg(); return; }
+
+  $("box").value = ""; sizeBox();
+  var mine = addRow("你", true);
+  mine.bubble.textContent = text;
+  copyBtn(mine.meta, function(){ return text; });
+
+  msgs.push({ role:"user", content:text });
+
+  var out = addRow(cur.prov.name + " · " + cur.model, false);
+  var wait = document.createElement("span");
+  wait.className = "dots"; wait.textContent = "等回應";
+  out.bubble.appendChild(wait);
+
+  var think = null, thinkBody = null, reason = "", answer = "";
+  var t0 = Date.now();
+
+  busy = true; $("btnSend").textContent = "停止";
+  ctrl = new AbortController();
+
+  var body = { model:cur.model, messages:msgs, stream:true };
+  // enable_thinking 是 vLLM/Qwen 的參數，只對勾了那個選項的供應商送
+  if (!$("think").checked && cur.prov.vllm) body.chat_template_kwargs = { enable_thinking:false };
+
+  fetch(base(cur.prov.url) + "/chat/completions", {
+    method:"POST",
+    headers:{ Authorization:"Bearer " + (cur.prov.key || "x"), "Content-Type":"application/json" },
+    body: JSON.stringify(body),
+    signal: ctrl.signal
+  }).then(function(r){
+    if (!r.ok) return r.text().then(function(t){ throw { s:r.status, t:t }; });
+    var reader = r.body.getReader(), dec = new TextDecoder(), buf = "";
+
+    function pump(){
+      return reader.read().then(function(res){
+        if (res.done) return;
+        buf += dec.decode(res.value, { stream:true });
+        var parts = buf.split("\n");
+        buf = parts.pop();
+
+        for (var i = 0; i < parts.length; i++){
+          var line = parts[i].trim();
+          if (line.indexOf("data:") !== 0) continue;
+          var d = line.slice(5).trim();
+          if (d === "[DONE]") continue;
+          var delta;
+          try { delta = JSON.parse(d).choices[0].delta; } catch(e){ continue; }
+
+          var rc = delta.reasoning_content || delta.reasoning;
+          if (rc){
+            if (!think){
+              wait.remove();
+              think = document.createElement("details");
+              think.className = "think"; think.open = true;
+              var sum = document.createElement("summary"); sum.textContent = "思考中…";
+              thinkBody = document.createElement("div"); thinkBody.className = "body";
+              think.appendChild(sum); think.appendChild(thinkBody);
+              out.bubble.appendChild(think);
+            }
+            reason += rc;
+            thinkBody.textContent = reason;
+            thinkBody.scrollTop = thinkBody.scrollHeight;
+          }
+          if (delta.content){
+            if (wait.parentNode) wait.remove();
+            if (think && think.open){
+              think.open = false;
+              think.querySelector("summary").textContent = "想了 " + reason.length + " 字（點開看）";
+            }
+            answer += delta.content;
+            var stick = atBottom();
+            var holder = out.bubble.querySelector(".ans");
+            if (!holder){
+              holder = document.createElement("div");
+              holder.className = "ans";
+              out.bubble.appendChild(holder);
+            }
+            holder.innerHTML = md(answer.replace(/^\s+/, ""));
+            if (stick) toBottom();
+          }
+        }
+        return pump();
+      });
+    }
+    return pump();
+  }).then(function(){
+    if (wait.parentNode) wait.remove();
+    if (think && think.open){
+      think.open = false;
+      think.querySelector("summary").textContent = "想了 " + reason.length + " 字（點開看）";
+    }
+    if (answer){
+      msgs.push({ role:"assistant", content:answer });
+      saveLog();
+      var info = document.createElement("span");
+      info.textContent = ((Date.now() - t0) / 1000).toFixed(1) + " 秒" +
+                         (reason ? " · 思考 " + reason.length + " 字" : "");
+      out.meta.appendChild(info);
+      copyBtn(out.meta, function(){ return answer; });
+    } else {
+      msgs.pop();
+      out.bubble.className = "bubble err";
+      out.bubble.textContent = reason
+        ? "它一直在思考、沒給出答案。把上面「讓它思考」的勾取消，再問一次。"
+        : "沒收到任何回應，再試一次。";
+    }
+  }).catch(function(e){
+    if (wait.parentNode) wait.remove();
+    msgs.pop();
+    if (e && e.name === "AbortError"){
+      if (answer){ out.meta.textContent = "（已停止）"; msgs.push({ role:"assistant", content:answer }); saveLog(); }
+      else out.bubble.textContent = "（已停止）";
+    } else {
+      out.bubble.className = "bubble err";
+      out.bubble.textContent = explain(e && e.s ? e.s : 0, e && e.t, cur.prov.name);
+    }
+  }).then(function(){
+    busy = false; ctrl = null;
+    $("btnSend").textContent = "送出";
+    $("box").focus();
+  });
+}
+
+/* ───────── 對話紀錄 ───────── */
+function saveLog(){ set(LS.log, JSON.stringify(msgs.slice(-40))); }
+function loadLog(){
+  var raw = get(LS.log, "");
+  if (!raw) return;
+  try { msgs = JSON.parse(raw) || []; } catch(e){ msgs = []; return; }
+  msgs.forEach(function(m){
+    var r = addRow(m.role === "user" ? "你" : "AI", m.role === "user");
+    if (m.role === "user") r.bubble.textContent = m.content;
+    else r.bubble.innerHTML = md(m.content);
+    copyBtn(r.meta, function(){ return m.content; });
+  });
+  $("hint").textContent = "（接續上次的對話，按「新對話」清空）";
+}
+
+/* ───────── 設定視窗：供應商清單 ───────── */
+var draft = [];
+
+function renderProvs(){
+  var box = $("provs");
+  box.innerHTML = "";
+  draft.forEach(function(p, idx){
+    var d = document.createElement("div");
+    d.className = "prov";
+
+    var top = document.createElement("div");
+    top.className = "top";
+    var nm = document.createElement("input");
+    nm.type = "text"; nm.value = p.name || ""; nm.placeholder = "顯示名稱，例如 我的端點（公網）";
+    nm.oninput = function(){ draft[idx].name = nm.value; };
+    var rm = document.createElement("button");
+    rm.className = "del"; rm.textContent = "刪除"; rm.title = "移除這個供應商";
+    rm.onclick = function(){ draft.splice(idx, 1); renderProvs(); };
+    top.appendChild(nm); top.appendChild(rm);
+
+    var lu = document.createElement("label"); lu.textContent = "網址（結尾通常是 /v1）";
+    var iu = document.createElement("input");
+    iu.type = "text"; iu.value = p.url || ""; iu.placeholder = "https://.../v1";
+    iu.spellcheck = false;
+    iu.oninput = function(){ draft[idx].url = iu.value; };
+
+    var lk = document.createElement("label"); lk.textContent = "API key";
+    var ik = document.createElement("input");
+    ik.type = "password"; ik.value = p.key || ""; ik.placeholder = "sk-...";
+    ik.autocomplete = "off"; ik.spellcheck = false;
+    ik.oninput = function(){ draft[idx].key = ik.value; };
+
+    var vl = document.createElement("label");
+    vl.className = "vl";
+    var vc = document.createElement("input");
+    vc.type = "checkbox"; vc.checked = !!p.vllm;
+    vc.onchange = function(){ draft[idx].vllm = vc.checked; };
+    vl.appendChild(vc);
+    vl.appendChild(document.createTextNode("用 vLLM 參數關思考（llm、Ollama 的 Qwen 這類要勾；OpenAI 官方不要勾）"));
+
+    d.appendChild(top); d.appendChild(lu); d.appendChild(iu);
+    d.appendChild(lk); d.appendChild(ik); d.appendChild(vl);
+    box.appendChild(d);
+  });
+}
+
+function openCfg(){
+  draft = JSON.parse(JSON.stringify(provs));
+  if (!draft.length) draft = seedProvs();
+  renderProvs();
+  $("mask").classList.add("on");
+}
+function closeCfg(){ $("mask").classList.remove("on"); }
+
+function sizeBox(){
+  var b = $("box");
+  b.style.height = "auto";
+  b.style.height = Math.min(b.scrollHeight, 210) + "px";
+}
+
+/* ───────── 綁事件 ───────── */
+$("btnSend").onclick = send;
+$("box").addEventListener("input", sizeBox);
+$("box").addEventListener("keydown", function(e){
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing){ e.preventDefault(); send(); }
+});
+$("pick").onchange = function(){
+  sel = this.value; set(LS.sel, sel);
+  del(LS.think);                 // 換模型就回到該模型的預設思考設定
+  applyThinkDefault();
+};
+$("btnReload").onclick = function(){ connect(); };
+$("think").onchange = function(){ set(LS.think, this.checked ? "1" : "0"); };
+$("btnNew").onclick = function(){
+  if (busy && ctrl) ctrl.abort();
+  msgs = []; chat.innerHTML = ""; $("hint").textContent = "";
+  del(LS.log); $("box").focus();
+};
+$("btnCfg").onclick = openCfg;
+$("btnAdd").onclick = function(){
+  draft.push({ id:"p" + Date.now().toString(36), name:"", url:"", key:"", vllm:false });
+  renderProvs();
+};
+$("cfgCancel").onclick = closeCfg;
+$("cfgSave").onclick = function(){
+  provs = draft.filter(function(p){ return (p.url || "").trim(); })
+               .map(function(p){
+                 return { id:p.id || ("p" + Math.random().toString(36).slice(2)),
+                          name:(p.name || "").trim() || p.url,
+                          url:p.url.trim(), key:(p.key || "").trim(), vllm:!!p.vllm };
+               });
+  saveProvs(); closeCfg(); $("hint").textContent = ""; connect();
+};
+$("mask").addEventListener("click", function(e){ if (e.target === $("mask")) closeCfg(); });
+document.addEventListener("keydown", function(e){
+  if (e.key === "Escape" && $("mask").classList.contains("on")) closeCfg();
+});
+
+/* ───────── 起跑 ───────── */
+loadLog();
+connect();
+sizeBox();
+</script>
+</body>
+</html>

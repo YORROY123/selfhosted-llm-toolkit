@@ -1,0 +1,58 @@
+{
+  "_comment": [
+    "Goes in ~/.pi/agent/models.json . The top-level 'providers' key is required.",
+    "'reasoning' must be true, or /thinking offers only 'off'.",
+    "List all seven thinking levels: Pi does NOT clamp undefined ones - it sends a",
+    "value the backend rejects with 400.",
+    "Probe your backend for valid reasoning_effort values. This deployment takes",
+    "low/medium/xhigh and has no 'high', so Pi's 'high' maps to 'xhigh'.",
+    "Run /reload in a running Pi session after editing this file."
+  ],
+  "providers": {
+    "mine": {
+      "baseUrl": "https://YOUR-ENDPOINT.example.com/v1",
+      "api": "openai-completions",
+      "apiKey": "sk-YOUR-KEY-HERE",
+      "models": [
+        {
+          "id": "my-strong",
+          "name": "my-strong (coding & planning)",
+          "reasoning": true,
+          "input": ["text"],
+          "contextWindow": 65536,
+          "maxTokens": 16384,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+          "samplingParams": { "chat_template_kwargs": { "enable_thinking": false } },
+          "samplingParamsByThinkingLevel": {
+            "off":     { "chat_template_kwargs": { "enable_thinking": false } },
+            "minimal": { "chat_template_kwargs": { "enable_thinking": true }, "reasoning_effort": "low" },
+            "low":     { "chat_template_kwargs": { "enable_thinking": true }, "reasoning_effort": "low" },
+            "medium":  { "chat_template_kwargs": { "enable_thinking": true }, "reasoning_effort": "medium" },
+            "high":    { "chat_template_kwargs": { "enable_thinking": true }, "reasoning_effort": "xhigh" },
+            "xhigh":   { "chat_template_kwargs": { "enable_thinking": true }, "reasoning_effort": "xhigh" },
+            "max":     { "chat_template_kwargs": { "enable_thinking": true }, "reasoning_effort": "xhigh" }
+          }
+        },
+        {
+          "id": "my-fast",
+          "name": "my-fast (everyday)",
+          "reasoning": true,
+          "input": ["text"],
+          "contextWindow": 65536,
+          "maxTokens": 16384,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+          "samplingParams": { "chat_template_kwargs": { "enable_thinking": false } },
+          "samplingParamsByThinkingLevel": {
+            "off":     { "chat_template_kwargs": { "enable_thinking": false } },
+            "minimal": { "chat_template_kwargs": { "enable_thinking": true }, "reasoning_effort": "low" },
+            "low":     { "chat_template_kwargs": { "enable_thinking": true }, "reasoning_effort": "low" },
+            "medium":  { "chat_template_kwargs": { "enable_thinking": true }, "reasoning_effort": "medium" },
+            "high":    { "chat_template_kwargs": { "enable_thinking": true }, "reasoning_effort": "xhigh" },
+            "xhigh":   { "chat_template_kwargs": { "enable_thinking": true }, "reasoning_effort": "xhigh" },
+            "max":     { "chat_template_kwargs": { "enable_thinking": true }, "reasoning_effort": "xhigh" }
+          }
+        }
+      ]
+    }
+  }
+}

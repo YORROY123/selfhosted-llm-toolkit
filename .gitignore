@@ -1,0 +1,8 @@
+# 絕對不要進版控
+api_key.txt
+*key.txt
+auth.json
+.env
+
+__pycache__/
+*.pyc
